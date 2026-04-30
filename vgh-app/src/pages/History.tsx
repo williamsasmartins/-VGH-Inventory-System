@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase, type Transaction } from '../lib/supabase'
+import { computeTransactionCoverage } from '../utils/materialConfig'
 import * as XLSX from 'xlsx'
 
 export default function History() {
@@ -72,25 +73,31 @@ export default function History() {
   }, [transactions, filterType, filterDays, filterSearch, filterProject, filterCode, filterVendor])
 
   const totalOut = filtered.filter(t => t.type?.toUpperCase() === 'OUT' && t.unit_price)
-    .reduce((s, t) => s + (t.unit_price! * t.quantity), 0)
+    .reduce((s, t) => {
+      const coverage = computeTransactionCoverage(t.materials || { code: '' }, t.sheet_size, t.quantity)
+      return s + (t.unit_price! * coverage)
+    }, 0)
 
   function exportExcel() {
-    const rows = filtered.map(t => ({
-      Date: new Date(t.created_at).toLocaleString('en-US'),
-      Type: t.type === 'IN' ? 'In' : 'Out',
-      Project: t.project_name || '',
-      Code: t.materials?.code || '',
-      Material: t.materials?.name || '',
-      Category: t.materials?.category || '',
-      'Sheets/Pcs': t.sheet_count ?? '',
-      'Size': t.sheet_size || '',
-      Quantity: t.quantity,
-      Unit: t.materials?.unit || '',
-      Vendor: t.store_name || '',
-      'Unit Price': t.unit_price ? `$${Number(t.unit_price).toFixed(4)}` : '',
-      'Total': t.unit_price ? `$${(t.unit_price * t.quantity).toFixed(2)}` : '',
-      Notes: t.notes || '',
-    }))
+    const rows = filtered.map(t => {
+      const coverage = computeTransactionCoverage(t.materials || { code: '' }, t.sheet_size, t.quantity)
+      return {
+        Date: new Date(t.created_at).toLocaleString('en-US'),
+        Type: t.type === 'IN' ? 'In' : 'Out',
+        Project: t.project_name || '',
+        Code: t.materials?.code || '',
+        Material: t.materials?.name || '',
+        Category: t.materials?.category || '',
+        'Sheets/Pcs': t.sheet_count ?? '',
+        'Size': t.sheet_size || '',
+        Quantity: coverage,
+        Unit: t.materials?.unit || '',
+        Vendor: t.store_name || '',
+        'Unit Price': t.unit_price ? `$${Number(t.unit_price).toFixed(4)}` : '',
+        'Total': t.unit_price ? `$${(t.unit_price * coverage).toFixed(2)}` : '',
+        Notes: t.notes || '',
+      }
+    })
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'History')
@@ -247,7 +254,8 @@ export default function History() {
                 </thead>
                 <tbody>
                   {filtered.map(t => {
-                    const lineTotal = t.unit_price ? t.unit_price * t.quantity : null
+                    const coverage = computeTransactionCoverage(t.materials || { code: '' }, t.sheet_size, t.quantity)
+                    const lineTotal = t.unit_price ? t.unit_price * coverage : null
                     return (
                       <tr key={t.id}>
                         <td style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>{formatDate(t.created_at)}</td>
@@ -275,7 +283,7 @@ export default function History() {
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ fontWeight: 700, textAlign: 'right' }}>{t.quantity}</td>
+                        <td style={{ fontWeight: 700, textAlign: 'right' }}>{coverage}</td>
                         <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t.materials?.unit}</td>
                         <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t.store_name || '—'}</td>
                         <td style={{ textAlign: 'right', color: '#F59E0B', fontWeight: 600, fontSize: 13 }}>

@@ -90,7 +90,7 @@ export default function History() {
         Category: t.materials?.category || '',
         'Sheets/Pcs': t.sheet_count ?? '',
         'Size': t.sheet_size || '',
-        Quantity: coverage,
+        Quantity: t.quantity,
         Unit: t.materials?.unit || '',
         Vendor: t.store_name || '',
         'Unit Price': t.unit_price ? `$${Number(t.unit_price).toFixed(4)}` : '',
@@ -283,7 +283,7 @@ export default function History() {
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ fontWeight: 700, textAlign: 'right' }}>{coverage}</td>
+                        <td style={{ fontWeight: 700, textAlign: 'right' }}>{t.quantity}</td>
                         <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t.materials?.unit}</td>
                         <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t.store_name || '—'}</td>
                         <td style={{ textAlign: 'right', color: '#F59E0B', fontWeight: 600, fontSize: 13 }}>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 54" fill="none">
+  <!-- Green slashes // matching exact logo style -->
+  <path d="M8 48 L24 6 H36 L20 48 Z" fill="#16A34A"/>
+  <path d="M28 48 L44 6 H56 L40 48 Z" fill="#16A34A"/>
+  <!-- DRT INTERIORS - white for dark sidebar background -->
+  <text x="66" y="43"
+    font-family="'Inter','Barlow','Arial Black','Helvetica Neue',sans-serif"
+    font-weight="900"
+    font-size="31"
+    fill="white"
+    letter-spacing="-0.5">DRT INTERIORS</text>
+</svg>

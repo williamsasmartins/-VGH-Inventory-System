@@ -1,0 +1,23 @@
+# Internal AI tooling - do not commit
+.claude/
+
+# Node
+vgh-app/node_modules/
+node_modules/
+
+# Build output
+vgh-app/dist/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,281 @@
+VGH CONTROLE DE ESTOQUE
+Especificação Técnica Completa para Google Antigravity
+DRT Interiors Ltd • Abril 2026 • 246 Materiais
+1. VISÃO GERAL
+Nome: VGH Controle de Estoque
+Objetivo: Sistema de controle de inventário com entrada de materiais por código.
+Funcionalidade Principal: Digitar código → Auto-preenche nome/descrição
+2. STACK TECNOLÓGICO
+Frontend: React + TypeScript + Tailwind CSS
+Backend: Supabase (PostgreSQL)
+Export: SheetJS (xlsx)
+Cores: Verde #16A34A | Alerta #DC2626
+3. BANCO DE DADOS
+Tabela: materials
+id (UUID PK), code (TEXT UNIQUE), name (TEXT), category (TEXT), unit (TEXT), current_stock (INTEGER), min_stock_alert (INTEGER DEFAULT 5), created_at (TIMESTAMPTZ)
+Tabela: transactions
+id (UUID PK), material_id (UUID FK), type ('IN'|'OUT'), quantity (INTEGER), notes (TEXT), created_at (TIMESTAMPTZ)
+TRIGGER: Após INSERT em transactions, atualiza current_stock automaticamente (+quantity para IN, -quantity para OUT)
+4. TELAS
+Dashboard
+Cards de materiais por categoria. Alerta VERMELHO quando estoque < 5. Busca por código/nome.
+Movimento (PRINCIPAL)
+AUTO-COMPLETE: Usuário digita código → Sistema busca na tabela materials → Preenche nome automaticamente. Toggle IN/OUT, quantidade, notas opcionais.
+Histórico
+Lista de transações. Filtros por material/tipo/período. Botão Exportar Excel.
+Configurações
+Adicionar/editar materiais. Definir limite de alerta.
+
+5. CATÁLOGO COMPLETO DE MATERIAIS (246 itens)
+IMPORTANTE: Carregar TODOS estes códigos na tabela materials do Supabase. O campo 'code' é UNIQUE e usado para auto-complete.
+
+Documento para Google Antigravity + Claude AI
+DRT Interiors Ltd © 2026
+Code	Name	Category	Unit	
+14f	1/4" Flex	Drywall	sqft	
+12std	1/2" Std	Drywall	sqft	
+12cd	1/2" CD	Drywall	sqft	
+54STD	1/2" Std 54"	Drywall	sqft	
+12tc	1/2" Type C	Drywall	sqft	
+12mr	1/2" Mould Resistant	Drywall	sqft	
+58tx	5/8" Type X	Drywall	sqft	
+58mr	5/8" Mould Resistant	Drywall	sqft	
+54tx	5/8" Type X 54"	Drywall	sqft	
+58tc	5/8" Type C	Drywall	sqft	
+12gr	1/2" GlassRoc	Drywall	sqft	
+58gr	5/8" GlassRoc	Drywall	sqft	
+12db	1/2" DiamondBacker	Drywall	sqft	
+58db	5/8" DiamondBacker	Drywall	sqft	
+1grsl	1" GlassRoc ShaftLiner	Drywall	sqft	
+1m2sl	1" M2 Tech Shaftliner	Drywall	sqft	
+12dr	1/2" Durock Tile Backer	Drywall	sqft	
+58dr	5/8" Durock Tile Backer	Drywall	sqft	
+34pw	3/4" Plywood	Drywall	sqft	
+58pw	5/8" Plywood	Drywall	sqft	
+12pw	1/2" Fire Rated Plywood	Drywall	sqft	
+qt530	QuietRock 550	Drywall	sqft	
+12qt	1/2" QuietRock 510	Drywall	sqft	
+12qtmr	1/2" QuietRock MR 510	Drywall	sqft	
+58qt	5/8" QuietRock EZ Snap	Drywall	sqft	
+58qtmr	5/8" QuietRock MR EZ Snap	Drywall	sqft	
+12ar	1/2" Abuse Resistant	Drywall	sqft	
+58ar	5/8" Abuse Resistant - Type X	Drywall	sqft	
+r8	R8 Insulation	Insulation	sqft	
+r12	R12 Insulation	Insulation	sqft	
+r20	R20 Insulation	Insulation	sqft	
+R12QZ	R12 QUIET ZONE	Insulation	sqft	
+R20QZ	R20 QUIET ZONE	Insulation	sqft	
+r28	R28 Insulation	Insulation	sqft	
+r35	R35 Insulation	Insulation	sqft	
+r40	R40 Insulation	Insulation	sqft	
+R10	Roxul Comfort Batt R10	Insulation	sqft	
+R14	Roxul Comfort Batt R14	Insulation	sqft	
+R22	Roxul Comfort Batt R22	Insulation	sqft	
+AFB25	Roxul AFB 2 1/2"	Insulation	sqft	
+AFB35	Roxul AF 3 5/8"	Insulation	sqft	
+AFB6	Roxul AFB 6"	Insulation	sqft	
+6mil	6 Mil Poly	Insulation	sqft	
+lwp	Light Weight Poly	Insulation	ea	
+15T4R	1 1/2" TYPE 4 RIGID	Insulation	sqft	
+2fb	2" Foil Back Insulation	Insulation	sqft	
+251s	25 Ga 1 5/8" Stud	Steel Framing	lnft	
+251t	25 Ga 1 5/8" Track	Steel Framing	lnft	
+251dt	25 Ga 1 5/8" Deep Track	Steel Framing	lnft	
+252s	25 Ga 2 1/2" Stud	Steel Framing	lnft	
+252t	25 Ga 2 1/2" Track	Steel Framing	lnft	
+252dt	25 Ga 2 1/2" Deep Track	Steel Framing	lnft	
+252st	25 Ga 2 1/2" Slotted Track	Steel Framing	lnft	
+253s	25 Ga 3 5/8" Stud	Steel Framing	lnft	
+253t	25 Ga 3 5/8" Track	Steel Framing	lnft	
+253dt	25 Ga 3 5/8" Deep Track	Steel Framing	lnft	
+253st	25 Ga 3 5/8" Slotted Track	Steel Framing	lnft	
+256s	25 Ga 6" Stud	Steel Framing	lnft	
+256t	25 Ga 6" Track	Steel Framing	lnft	
+256dt	25 Ga 6" Deep Track	Steel Framing	lnft	
+256st	25 Ga 6" Slotted Track	Steel Framing	lnft	
+258s	25 Ga 8" Stud	Steel Framing	lnft	
+258t	25 Ga 8" Track	Steel Framing	lnft	
+258dt	25 Ga 8" Deep Track	Steel Framing	lnft	
+258st	25 Ga 8" Slotted Track	Steel Framing	lnft	
+201s	20 Ga 1 5/8" Stud	Steel Framing	lnft	
+201t	20 Ga 1 5/8" Track	Steel Framing	lnft	
+201dt	20 Ga 1 5/8" Deep Track	Steel Framing	lnft	
+202s	20 Ga 2 1/2" Stud	Steel Framing	lnft	
+202t	20 Ga 2 1/2" Track	Steel Framing	lnft	
+202dt	20 Ga 2 1/2" Deep Track	Steel Framing	lnft	
+202st	20 Ga 2 1/2" Slotted Track	Steel Framing	lnft	
+203s	20 Ga 3 5/8" Stud	Steel Framing	lnft	
+203t	20 Ga 3 5/8" Track	Steel Framing	lnft	
+203dt	20 Ga 3 5/8" Deep Track	Steel Framing	lnft	
+203st	20 Ga 3 5/8" Slotted Track	Steel Framing	lnft	
+206s	20 Ga 6" Stud	Steel Framing	lnft	
+206t	20 Ga 6" Track	Steel Framing	lnft	
+206dt	20 Ga 6" Deep Track	Steel Framing	lnft	
+206st	20 Ga 6" Slotted Track	Steel Framing	lnft	
+208s	20 Ga 8" Stud	Steel Framing	lnft	
+208t	20 Ga 8" Track	Steel Framing	lnft	
+208dt	20 Ga 8" Deep Track	Steel Framing	lnft	
+208st	20 Ga 8" Slotted Track	Steel Framing	lnft	
+202swl	20 Ga 2 1/2" Stud 1 5/8" Flange	Steel Framing	lnft	
+203swl	20 Ga 3 5/8" Stud 1 5/8" Flange	Steel Framing	lnft	
+206swl	20 Ga 6" Stud 1 5/8" Flange	Steel Framing	lnft	
+208swl	20 Ga 8" Stud 1 5/8" Flange	Steel Framing	lnft	
+181s	18 Ga 1 5/8" Stud	Steel Framing	lnft	
+181t	18 Ga 1 5/8" Track	Steel Framing	lnft	
+181dt	18 Ga 1 5/8" Deep Track	Steel Framing	lnft	
+182s	18 Ga 2 1/2" Stud	Steel Framing	lnft	
+182t	18 Ga 2 1/2" Track	Steel Framing	lnft	
+182dt	18 Ga 2 1/2" Deep Track	Steel Framing	lnft	
+182st	18 Ga 2 1/2" Slotted Track	Steel Framing	lnft	
+183s	18 Ga 3 5/8" Stud	Steel Framing	lnft	
+183t	18 Ga 3 5/8" Track	Steel Framing	lnft	
+183dt	18 Ga 3 5/8" Deep Track	Steel Framing	lnft	
+183st	18 Ga 3 5/8" Slotted Track	Steel Framing	lnft	
+186s	18 Ga 6" Stud	Steel Framing	lnft	
+186t	18 Ga 6" Track	Steel Framing	lnft	
+186dt	18 Ga 6" Deep Track	Steel Framing	lnft	
+186st	18 Ga 6" Slotted Track	Steel Framing	lnft	
+188s	18 Ga 8" Stud	Steel Framing	lnft	
+188t	18 Ga 8" Track	Steel Framing	lnft	
+188dt	18 Ga 8" Deep Track	Steel Framing	lnft	
+188st	18 Ga 8" Slotted Track	Steel Framing	lnft	
+163s	16 Ga 3 5/8" Stud	Steel Framing	lnft	
+163t	16 Ga 3 5/8" Track	Steel Framing	lnft	
+163dt	16 Ga 3 5/8" Deep Track	Steel Framing	lnft	
+163st	16 Ga 3 5/8" Slotted Track	Steel Framing	lnft	
+166s	16 Ga 6" Stud	Steel Framing	lnft	
+166t	16 Ga 6" Track	Steel Framing	lnft	
+166dt	16 Ga 6" Deep Track	Steel Framing	lnft	
+166st	16 Ga 6" Slotted Track	Steel Framing	lnft	
+168s	16 Ga 8" Stud	Steel Framing	lnft	
+168t	16 Ga 8" Track	Steel Framing	lnft	
+168dt	16 Ga 8" Deep Track	Steel Framing	lnft	
+168st	16 Ga 8" Slotted Track	Steel Framing	lnft	
+143s	14 Ga 3 5/8" Stud	Steel Framing	lnft	
+143t	14 Ga 3 5/8" Track	Steel Framing	lnft	
+143dt	14 Ga 3 5/8" Deep Track	Steel Framing	lnft	
+143st	14 Ga 3 5/8" Slotted Track	Steel Framing	lnft	
+146s	14 Ga 6" Stud	Steel Framing	lnft	
+146t	14 Ga 6" Track	Steel Framing	lnft	
+146dt	14 Ga 6" Deep Track	Steel Framing	lnft	
+146st	14 Ga 6" Slotted Track	Steel Framing	lnft	
+148s	14 Ga 8" Stud	Steel Framing	lnft	
+148t	14 Ga 8" Track	Steel Framing	lnft	
+148dt	14 Ga 8" Deep Track	Steel Framing	lnft	
+148st	14 Ga 8" Slotted Track	Steel Framing	lnft	
+34cc	16 Ga 3/4" Carring Channel	Steel Framing	lnft	
+18cc	18 Ga 1 1/2" Carring Channel	Steel Framing	lnft	
+16cc	16 Ga 1 1/2" Carring Channel	Steel Framing	lnft	
+RC	25 Ga Resilient Channel	Steel Framing	lnft	
+25ht	25 Ga 7/8" Hat Track	Steel Framing	lnft	
+20ht	20 Ga 7/8" Hat Track	Steel Framing	lnft	
+18ht	18 Ga 7/8" Hat Track	Steel Framing	lnft	
+251a	25 Ga 1 1/2" Angle	Steel Framing	lnft	
+252a	25 Ga 2" Angle	Steel Framing	lnft	
+201a	20 Ga 1 1/2" Angle	Steel Framing	lnft	
+202a	20 Ga 2" Angle	Steel Framing	lnft	
+203a	20 Ga 3" Angle	Steel Framing	lnft	
+181a	18 Ga 1 1/2" Angle	Steel Framing	lnft	
+182a	18 Ga 2" Angle	Steel Framing	lnft	
+183a	18 Ga 3" Angle	Steel Framing	lnft	
+251x1z	25 Ga 1" x 1 1/2" Z-Bar	Steel Framing	lnft	
+251x2z	25 Ga 1" x 2" Z-Bar	Steel Framing	lnft	
+201x1z	20 Ga 1" x 1 1/2" Z-Bar	Steel Framing	lnft	
+201x2z	20 Ga 1" x 2" Z-Bar	Steel Framing	lnft	
+202fs	20 Ga 2" Flatstock	Steel Framing	lnft	
+204fs	20 Ga 4" Flatstock	Steel Framing	lnft	
+206fs	20 Ga 6" Flatstock	Steel Framing	lnft	
+182fs	18 Ga 2" Flatstock	Steel Framing	lnft	
+184fs	18 Ga 4" Flatstock	Steel Framing	lnft	
+186fs	18 Ga 6" Flatstock	Steel Framing	lnft	
+HW	Hanger Wire	Steel Framing	lnft	
+9GHW	9 Ga Hanger Wire	Steel Framing	lnft	
+Pr	Pencil Rod	Steel Framing	lnft	
+Tw	Tie Wire	Steel Framing	lnft	
+Wb	Wood Backing	Steel Framing	lnft	
+SM	9 Ga Security Mesh	Steel Framing	sqft	
+252ct	25 Ga 2 1/2" CT Stud	Steel Framing	lnft	
+252jt	25 Ga 2 1/2" J Track	Steel Framing	lnft	
+254ct	25 Ga 4" CT Stud	Steel Framing	lnft	
+254jt	25 Ga 4" J Track	Steel Framing	lnft	
+256ct	25 Ga 6" CT Stud	Steel Framing	lnft	
+256jt	25 Ga 6" J Track	Steel Framing	lnft	
+202ct	20 Ga 2 1/2" CT Stud	Steel Framing	lnft	
+202jt	20 Ga 2 1/2" J Track	Steel Framing	lnft	
+204ct	20 Ga 4" CT Stud	Steel Framing	lnft	
+204jt	20 Ga 4" J Track	Steel Framing	lnft	
+206ct	20 Ga 6" CT Stud	Steel Framing	lnft	
+206jt	20 Ga 6" J Track	Steel Framing	lnft	
+mb	Yellow Box	Tape & Mud	box	
+mp	Yellow Pail	Tape & Mud	pail	
+huf	Hamilton UtraFill	Tape & Mud	bag	
+huc	Hamilton UltraCeil	Tape & Mud	bag	
+jt	Paper Joint Tape Roll	Tape & Mud	roll	
+cb	Paper Corner Bead	Tape & Mud	lnft	
+ta	Tear Away Bead	Tape & Mud	lnft	
+12pl	1/2" Paper L Bead	Tape & Mud	lnft	
+58pl	5/8" Paper L Bead	Tape & Mud	lnft	
+12pj	1/2" Plastic J Bead	Tape & Mud	lnft	
+58pj	5/8" Plastic J Bead	Tape & Mud	lnft	
+12ppj	1/2" Paper J Bead	Tape & Mud	lnft	
+58ppj	5/8" Paper J Bead	Tape & Mud	lnft	
+nc325	No Coat 325	Tape & Mud	roll	
+nc450	No Coat 450	Tape & Mud	roll	
+mt	Main T	T-bar Ceiling	lnft	
+5ct	5' Cross T	T-bar Ceiling	lnft	
+4ct	4' Cross T	T-bar Ceiling	lnft	
+2ct	2' Cross T	T-bar Ceiling	lnft	
+flmt	Main 9/16" T	T-bar Ceiling	lnft	
+fl5	9/16" 5' Cross T	T-bar Ceiling	lnft	
+fl4	9/16" 4' Cross T	T-bar Ceiling	lnft	
+fl2	9/16" 2' Cross T	T-bar Ceiling	lnft	
+Wm	Wall Mould	T-bar Ceiling	lnft	
+flWm	Wall Mould 9/16"	T-bar Ceiling	lnft	
+shm	Shadow Mold	T-bar Ceiling	lnft	
+DWGMT	Drywall Grid Main T	T-bar Ceiling	lnft	
+DWG4	Drywall Grid 4' T	T-bar Ceiling	lnft	
+DWG2	Drywall Grid 2' T	T-bar Ceiling	lnft	
+T2310	Stock Tile	T-bar Ceiling	sqft	
+T9678	Armstrong 9768 Sahara	T-bar Ceiling	sqft	
+DWT	DRYWALL TILE	T-bar Ceiling	sqft	
+t16101	Rocfon Sonar #16101	T-bar Ceiling	sqft	
+t201	Rocfon Pacific #201	T-bar Ceiling	sqft	
+t601	Rocfon Artic #601	T-bar Ceiling	sqft	
+t1101	Rocfon Koral #1101	T-bar Ceiling	sqft	
+ct	Ceiling Tile	T-bar Ceiling	sqft	
+t1340	Symphony F foil back 1340	T-bar Ceiling	sqft	
+t224	Cashmere 224	T-bar Ceiling	sqft	
+bet197	CertainTeed BET 197	T-bar Ceiling	sqft	
+Lag	Lags	Accessories	ea	
+Revo	Revo Clip	Accessories	ea	
+Trevo	Tegular Revo Clip	Accessories	ea	
+acp	Acoustic Clips	Accessories	ea	
+114ft	1 1/4" Fine Thread DW Screws	Fasteners	box	
+158ft	1 5/8" Fine Thread DW Screws	Fasteners	box	
+2ft	2" Fine Thread DW Screws	Fasteners	box	
+114st	1 1/4" Self Tapping DW Screws	Fasteners	box	
+158st	1 5/8" Self Tapping DW Screws	Fasteners	box	
+2st	2" Self Tapping Screws	Fasteners	box	
+112ls	1 1/2" Laminating Screws	Fasteners	box	
+waf	Wafers	Fasteners	box	
+stw	Self Tapping Wafers	Fasteners	box	
+H506	Hilti 506	Fasteners	ea	
+H606	Hilti 606	Fasteners	ea	
+fs	4800DW Firestop Sealant 850 ML	Adhesives	tube	
+as	Acoustical Sealant 850 ML	Adhesives	tube	
+pl	PL Premium Adhesive 825 ML	Adhesives	tube	
+sg	3M Super 77 Spray Glue	Adhesives	can	
+vghl	VGH Labour	Labour	hour	
+FL	Framing Labour	Labour	hour	
+IL	Insulation Labour	Labour	hour	
+DL	Drywall Labour	Labour	hour	
+TL	Taping Labour	Labour	hour	
+ACL	Acoustic Ceiling Labour	Labour	hour	
+CU	Clean Up	Labour	hour	
+S	Supervision	Labour	hour	
+Demo	Demo Labour	Labour	hour	
+SL	Scissor Lift	Equipment	day	
+TM	Taping Material	Equipment	sqft	
+D	Disposal	Equipment	load	
+DF	Delivery Fee	Equipment	ea	
+

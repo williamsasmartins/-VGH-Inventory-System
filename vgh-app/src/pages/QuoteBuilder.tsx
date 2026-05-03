@@ -111,10 +111,9 @@ export default function QuoteBuilder({ showToast }: Props) {
   const matTotal   = matItems.reduce((s, i) => s + getCostValue(i), 0)
   const labTotal   = labItems.reduce((s, i) => s + getCostValue(i), 0)
   const grandTotal = matTotal + labTotal
-  const totalHours = labItems.reduce((s, i) => {
-    if (i.unit?.toLowerCase() === 'hrs' && i.quantity !== '' && typeof i.quantity === 'number') return s + i.quantity
-    return s
-  }, 0)
+  const totalHours = labItems
+    .filter(i => i.unit?.toLowerCase() === 'hrs' && i.quantity !== '' && Number(i.quantity) > 0)
+    .reduce((s, i) => s + Number(i.quantity), 0)
 
   const [suggestions, setSuggestions]     = useState<Material[]>([])
   const [activeId, setActiveId]           = useState<string | null>(null)
@@ -482,6 +481,7 @@ export default function QuoteBuilder({ showToast }: Props) {
     <tr><td colspan="6" style="padding:6px 0;border:none"></td></tr>
     <tr class="sec"><td colspan="6">Labour</td></tr>
     ${labRows}
+    ${totalHours > 0 ? `<tr class="sub-lab"><td colspan="4"></td><td style="text-align:right;color:#6d28d9">Total Hours:</td><td style="text-align:right;color:#6d28d9;font-family:monospace">${totalHours} Hrs</td></tr>` : ''}
     <tr class="sub-lab">
       <td colspan="4"></td>
       <td style="text-align:right;color:#6d28d9">Labour Subtotal:</td>
@@ -994,7 +994,11 @@ export default function QuoteBuilder({ showToast }: Props) {
             }}>
               <div style={{ fontSize: 10, color: '#A78BFA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Labour</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#A78BFA', fontFamily: 'monospace' }}>${labTotal.toFixed(2)}</div>
+<<<<<<< HEAD
               {totalHours > 0 && <div style={{ fontSize: 11, color: '#A78BFA', fontFamily: 'monospace', marginTop: 4, opacity: 0.8 }}>{totalHours} Hrs total</div>}
+=======
+              {totalHours > 0 && <div style={{ fontSize: 11, color: '#A78BFA', opacity: 0.75, marginTop: 3 }}>{totalHours} Hrs total</div>}
+>>>>>>> 80fd4df (new)
             </div>
             {/* Grand total */}
             <div style={{
@@ -1055,7 +1059,7 @@ export default function QuoteBuilder({ showToast }: Props) {
                 </tr>
                 <tr style={{ background: 'rgba(167,139,250,0.06)', borderTop: '1px solid rgba(167,139,250,0.2)' }}>
                   <td colSpan={5} style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, fontSize: 12, color: '#A78BFA', letterSpacing: '0.3px' }}>
-                    LABOUR SUBTOTAL:
+                    LABOUR SUBTOTAL:{totalHours > 0 && <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>({totalHours} Hrs)</span>}
                   </td>
                   <td style={{ color: '#A78BFA', textAlign: 'center', padding: '8px 3px', opacity: 0.7 }}>$</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, fontSize: 16, color: '#A78BFA', fontFamily: 'monospace' }}>

@@ -548,7 +548,7 @@ export default function QuoteBuilder({ showToast }: Props) {
     <span class="totals-value" style="color:#1d4ed8">$${matTotal.toFixed(2)}</span>
   </div>
   <div class="totals-row">
-    <span class="totals-label">Labour Cost${totalHours > 0 ? `<span style="font-weight:400;font-size:13px;margin-left:10px;opacity:0.75">${totalHours} Hrs</span>` : ''}</span>
+    <span class="totals-label">Labour Cost${totalHours > 0 ? `<span style="font-weight:800;font-size:14px;margin-left:12px;color:#6d28d9;background:#ede9fe;padding:2px 8px;border-radius:4px">${totalHours} Hrs</span>` : ''}</span>
     <span class="totals-value" style="color:#6d28d9">$${labTotal.toFixed(2)}</span>
   </div>
   <div class="totals-row grand">

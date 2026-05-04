@@ -994,11 +994,7 @@ export default function QuoteBuilder({ showToast }: Props) {
             }}>
               <div style={{ fontSize: 10, color: '#A78BFA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Labour</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#A78BFA', fontFamily: 'monospace' }}>${labTotal.toFixed(2)}</div>
-<<<<<<< HEAD
               {totalHours > 0 && <div style={{ fontSize: 11, color: '#A78BFA', fontFamily: 'monospace', marginTop: 4, opacity: 0.8 }}>{totalHours} Hrs total</div>}
-=======
-              {totalHours > 0 && <div style={{ fontSize: 11, color: '#A78BFA', opacity: 0.75, marginTop: 3 }}>{totalHours} Hrs total</div>}
->>>>>>> 80fd4df (new)
             </div>
             {/* Grand total */}
             <div style={{

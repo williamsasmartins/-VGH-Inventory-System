@@ -40,6 +40,9 @@ type SavedQuote = {
   lab_items: QuoteItem[]
   grand_total: number
   created_at: string
+  // Added by migration_14 — older rows read as null and default to printed.
+  print_material?: boolean | null
+  print_labour?: boolean | null
 }
 
 type QuoteItem = {
@@ -108,10 +111,15 @@ export default function QuoteBuilder({ showToast }: Props) {
   const [matItems, setMatItems]       = useState<QuoteItem[]>(() => { const d = getDraft(); return Array.isArray(d?.matItems) && d.matItems.length > 0 ? d.matItems : Array.from({ length: 8 }, () => newItem('Material')) })
   const [labItems, setLabItems]       = useState<QuoteItem[]>(() => { const d = getDraft(); return Array.isArray(d?.labItems) && d.labItems.length > 0 ? d.labItems : Array.from({ length: 5 }, () => newItem('Labour')) })
 
+  // Section print toggles. When a section is off it is left out of every
+  // printed document (Invoice, Detailed Quote, Excel) and out of the quoted total.
+  const [printMaterial, setPrintMaterial] = useState<boolean>(() => getDraft()?.printMaterial ?? true)
+  const [printLabour, setPrintLabour]     = useState<boolean>(() => getDraft()?.printLabour ?? true)
+
   const matTotal   = matItems.reduce((s, i) => s + getCostValue(i), 0)
   const labTotal   = labItems.reduce((s, i) => s + getCostValue(i), 0)
-  const grandTotal = matTotal + labTotal
-  const totalHours = labItems
+  const grandTotal = (printMaterial ? matTotal : 0) + (printLabour ? labTotal : 0)
+  const totalHours = !printLabour ? 0 : labItems
     .filter(i => i.unit?.toLowerCase() === 'hrs' && i.quantity !== '' && Number(i.quantity) > 0)
     .reduce((s, i) => s + Number(i.quantity), 0)
 
@@ -149,8 +157,8 @@ export default function QuoteBuilder({ showToast }: Props) {
   const isMounted = useRef(false)
   useEffect(() => {
     if (!isMounted.current) { isMounted.current = true; return }
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ projectName, description, store, matItems, labItems }))
-  }, [projectName, description, store, matItems, labItems])
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ projectName, description, store, matItems, labItems, printMaterial, printLabour }))
+  }, [projectName, description, store, matItems, labItems, printMaterial, printLabour])
 
   const searchMats = useCallback(async (q: string) => {
     if (!q.trim()) { setSuggestions([]); return }
@@ -329,6 +337,8 @@ export default function QuoteBuilder({ showToast }: Props) {
     setProjectName('')
     setDescription('')
     setStore('Kenroc')
+    setPrintMaterial(true)
+    setPrintLabour(true)
     setMatItems(Array.from({ length: 8 }, () => newItem('Material')))
     setLabItems(Array.from({ length: 5 }, () => newItem('Labour')))
     setActiveId(null)
@@ -350,17 +360,31 @@ export default function QuoteBuilder({ showToast }: Props) {
       mat_items: matItems,
       lab_items: labItems,
       grand_total: parseFloat(grandTotal.toFixed(2)),
+      print_material: printMaterial,
+      print_labour: printLabour,
     }
 
     // If a quote was loaded, update it in-place. Otherwise insert a new row.
-    let error, newId: string | null = null
-    if (loadedQuoteId) {
-      const res = await supabase.from('quotes').update(payload).eq('id', loadedQuoteId)
-      error = res.error
-    } else {
-      const res = await supabase.from('quotes').insert(payload).select('id').single()
-      error = res.error
-      newId = (res.data as { id: string } | null)?.id ?? null
+    const send = async (body: Record<string, unknown>) => {
+      if (loadedQuoteId) {
+        const res = await supabase.from('quotes').update(body).eq('id', loadedQuoteId)
+        return { error: res.error, id: null as string | null }
+      }
+      const res = await supabase.from('quotes').insert(body).select('id').single()
+      return { error: res.error, id: (res.data as { id: string } | null)?.id ?? null }
+    }
+
+    let { error, id: newId } = await send(payload)
+    // Databases that have not run migration_14 yet reject the toggle columns —
+    // save the rest so the quote is never lost, and say what is missing.
+    if (error && /print_material|print_labour/.test(error.message)) {
+      const legacy: Record<string, unknown> = { ...payload }
+      delete legacy.print_material
+      delete legacy.print_labour
+      const retry = await send(legacy)
+      error = retry.error
+      newId = retry.id
+      if (!error) showToast('Saved, but print toggles need migration_14', 'error')
     }
 
     setIsSaving(false)
@@ -392,6 +416,8 @@ export default function QuoteBuilder({ showToast }: Props) {
     setStore(q.store)
     setMatItems(q.mat_items)
     setLabItems(q.lab_items)
+    setPrintMaterial(q.print_material ?? true)
+    setPrintLabour(q.print_labour ?? true)
     setLoadedQuoteId(q.id)
     setShowSaved(false)
     showToast('Quote loaded', 'success')
@@ -408,7 +434,12 @@ export default function QuoteBuilder({ showToast }: Props) {
   }
 
   function printQuote() {
-    if (![...matItems, ...labItems].some(i => i.code)) {
+    if (!printMaterial && !printLabour) {
+      showToast('Turn Material or Labour back on before printing', 'error')
+      return
+    }
+    const printedItems = [...(printMaterial ? matItems : []), ...(printLabour ? labItems : [])]
+    if (!printedItems.some(i => i.code)) {
       showToast('Add at least one item before printing', 'error')
       return
     }
@@ -436,6 +467,30 @@ export default function QuoteBuilder({ showToast }: Props) {
     const matRows = matItems.map(i => rowHtml(i, '#1a56db')).join('')
     const labRows = labItems.map(i => rowHtml(i, '#7e3af2')).join('')
     const dateStr = new Date().toLocaleDateString('en-CA')
+
+    const matBlock = !printMaterial ? '' : `
+    <tr class="sec"><td colspan="6">Material</td></tr>
+    ${matRows}
+    <tr class="sub-mat">
+      <td colspan="4"></td>
+      <td style="text-align:right;color:#1d4ed8">Material Subtotal:</td>
+      <td style="text-align:right;color:#1d4ed8">$${matTotal.toFixed(2)}</td>
+    </tr>`
+
+    const labBlock = !printLabour ? '' : `
+    <tr class="sec"><td colspan="6">Labour</td></tr>
+    ${labRows}
+    ${totalHours > 0 ? `<tr class="sub-lab"><td colspan="4"></td><td style="text-align:right;color:#6d28d9">Total Hours:</td><td style="text-align:right;color:#6d28d9;font-family:monospace">${totalHours} Hrs</td></tr>` : ''}
+    <tr class="sub-lab">
+      <td colspan="4"></td>
+      <td style="text-align:right;color:#6d28d9">Labour Subtotal:</td>
+      <td style="text-align:right;color:#6d28d9">$${labTotal.toFixed(2)}</td>
+    </tr>`
+
+    // Blank separator only when both sections are on
+    const sectionGap = printMaterial && printLabour
+      ? '<tr><td colspan="6" style="padding:6px 0;border:none"></td></tr>'
+      : ''
 
     win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>DRT Quote – ${projectName}</title>
@@ -471,22 +526,9 @@ export default function QuoteBuilder({ showToast }: Props) {
     <th style="width:90px;text-align:right">Cost</th>
   </tr></thead>
   <tbody>
-    <tr class="sec"><td colspan="6">Material</td></tr>
-    ${matRows}
-    <tr class="sub-mat">
-      <td colspan="4"></td>
-      <td style="text-align:right;color:#1d4ed8">Material Subtotal:</td>
-      <td style="text-align:right;color:#1d4ed8">$${matTotal.toFixed(2)}</td>
-    </tr>
-    <tr><td colspan="6" style="padding:6px 0;border:none"></td></tr>
-    <tr class="sec"><td colspan="6">Labour</td></tr>
-    ${labRows}
-    ${totalHours > 0 ? `<tr class="sub-lab"><td colspan="4"></td><td style="text-align:right;color:#6d28d9">Total Hours:</td><td style="text-align:right;color:#6d28d9;font-family:monospace">${totalHours} Hrs</td></tr>` : ''}
-    <tr class="sub-lab">
-      <td colspan="4"></td>
-      <td style="text-align:right;color:#6d28d9">Labour Subtotal:</td>
-      <td style="text-align:right;color:#6d28d9">$${labTotal.toFixed(2)}</td>
-    </tr>
+    ${matBlock}
+    ${sectionGap}
+    ${labBlock}
     ${totalHours > 0 ? `<tr>
       <td colspan="4"></td>
       <td style="text-align:right;font-weight:700;font-size:12px;color:#555">Total Hours:</td>
@@ -508,6 +550,10 @@ export default function QuoteBuilder({ showToast }: Props) {
   function printSimpleQuote() {
     if (!projectName.trim()) {
       showToast('Enter a project name before printing', 'error')
+      return
+    }
+    if (!printMaterial && !printLabour) {
+      showToast('Turn Material or Labour back on before printing', 'error')
       return
     }
     const win = window.open('', '_blank')
@@ -543,14 +589,14 @@ export default function QuoteBuilder({ showToast }: Props) {
   ${description ? `<p><strong>Scope:</strong> ${description}</p>` : ''}
 </div>
 <div class="totals">
-  <div class="totals-row">
+  ${printMaterial ? `<div class="totals-row">
     <span class="totals-label">Material Cost</span>
     <span class="totals-value" style="color:#1d4ed8">$${matTotal.toFixed(2)}</span>
-  </div>
-  <div class="totals-row">
+  </div>` : ''}
+  ${printLabour ? `<div class="totals-row">
     <span class="totals-label">Labour Cost${totalHours > 0 ? `<span style="font-weight:800;font-size:14px;margin-left:12px;color:#6d28d9;background:#ede9fe;padding:2px 8px;border-radius:4px">${totalHours} Hrs</span>` : ''}</span>
     <span class="totals-value" style="color:#6d28d9">$${labTotal.toFixed(2)}</span>
-  </div>
+  </div>` : ''}
   <div class="totals-row grand">
     <span class="totals-label">Total</span>
     <span class="totals-value">$${grandTotal.toFixed(2)}</span>
@@ -569,9 +615,10 @@ export default function QuoteBuilder({ showToast }: Props) {
     const setItems   = section === 'Material' ? setMatItems : setLabItems
     const isLabour   = item.isLabourFixed
     const matConfig  = !isLabour && item.material ? getMaterialConfig(item.material) : null
+    const printed    = section === 'Material' ? printMaterial : printLabour
 
     return (
-      <tr key={item.id}>
+      <tr key={item.id} style={printed ? undefined : { opacity: 0.4 }}>
 
         {/* ── Code ── */}
         <td style={{ padding: '5px 6px', position: 'relative' }}>
@@ -830,12 +877,34 @@ export default function QuoteBuilder({ showToast }: Props) {
     )
   }
 
-  function sectionHeader(label: string, accentColor: string) {
+  function sectionHeader(label: string, accentColor: string, printed: boolean, toggle: () => void) {
     return (
       <tr style={{ background: `${accentColor}18` }}>
-        <td colSpan={8} style={{ padding: '8px 14px', fontWeight: 800, fontSize: 12,
-          color: accentColor, textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {label}
+        <td colSpan={8} style={{ padding: '8px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontWeight: 800, fontSize: 12, color: accentColor,
+              textTransform: 'uppercase', letterSpacing: '1px', opacity: printed ? 1 : 0.5 }}>
+              {label}
+            </span>
+            <button
+              onClick={toggle}
+              title={printed
+                ? `${label} is included — click to leave it out of prints and exports`
+                : `${label} is left out of prints and exports — click to include it`}
+              style={{ border: `1px solid ${printed ? accentColor : 'var(--border)'}`,
+                background: printed ? `${accentColor}22` : 'transparent',
+                color: printed ? accentColor : 'var(--text-muted)',
+                borderRadius: 999, padding: '1px 10px', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.5px', cursor: 'pointer', lineHeight: '16px' }}>
+              {printed ? 'ON' : 'OFF'}
+            </button>
+            {!printed && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                not printed
+              </span>
+            )}
+          </div>
         </td>
       </tr>
     )
@@ -843,7 +912,11 @@ export default function QuoteBuilder({ showToast }: Props) {
 
   // ── Excel export ───────────────────────────────────────────────────────────
   function exportExcel() {
-    const allItems = [...matItems, ...labItems]
+    if (!printMaterial && !printLabour) {
+      showToast('Turn Material or Labour back on before exporting', 'error')
+      return
+    }
+    const allItems = [...(printMaterial ? matItems : []), ...(printLabour ? labItems : [])]
     if (!allItems.some(i => i.code)) { showToast('Add at least one item', 'error'); return }
 
     const pad = (n: number) => Array(n).fill('')
@@ -882,8 +955,8 @@ export default function QuoteBuilder({ showToast }: Props) {
       rows.push(pad(COLS))
     }
 
-    addSection('Material', matItems)
-    addSection('Labour', labItems)
+    if (printMaterial) addSection('Material', matItems)
+    if (printLabour) addSection('Labour', labItems)
     rows.push(['', '', '', '', '', '', '', 'TOTAL', '$', parseFloat(grandTotal.toFixed(2))])
 
     const ws = XLSX.utils.aoa_to_sheet(rows)
@@ -984,16 +1057,20 @@ export default function QuoteBuilder({ showToast }: Props) {
               background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)',
               borderRadius: 8, padding: '10px 14px',
             }}>
-              <div style={{ fontSize: 10, color: '#60A5FA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Material</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#60A5FA', fontFamily: 'monospace' }}>${matTotal.toFixed(2)}</div>
+              <div style={{ fontSize: 10, color: '#60A5FA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+                Material{!printMaterial && <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>· off</span>}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#60A5FA', fontFamily: 'monospace', opacity: printMaterial ? 1 : 0.4, textDecoration: printMaterial ? undefined : 'line-through' }}>${matTotal.toFixed(2)}</div>
             </div>
             {/* Labour subtotal */}
             <div style={{
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
               borderRadius: 8, padding: '10px 14px',
             }}>
-              <div style={{ fontSize: 10, color: '#A78BFA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Labour</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#A78BFA', fontFamily: 'monospace' }}>${labTotal.toFixed(2)}</div>
+              <div style={{ fontSize: 10, color: '#A78BFA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+                Labour{!printLabour && <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>· off</span>}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#A78BFA', fontFamily: 'monospace', opacity: printLabour ? 1 : 0.4, textDecoration: printLabour ? undefined : 'line-through' }}>${labTotal.toFixed(2)}</div>
               {totalHours > 0 && <div style={{ fontSize: 11, color: '#A78BFA', fontFamily: 'monospace', marginTop: 4, opacity: 0.8 }}>{totalHours} Hrs total</div>}
             </div>
             {/* Grand total */}
@@ -1024,7 +1101,7 @@ export default function QuoteBuilder({ showToast }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {sectionHeader('Material', '#60A5FA')}
+                {sectionHeader('Material', '#60A5FA', printMaterial, () => setPrintMaterial(v => !v))}
                 {matItems.map(item => renderRow(item, 'Material'))}
                 <tr>
                   <td colSpan={8} style={{ padding: '4px 8px' }}>
@@ -1034,7 +1111,7 @@ export default function QuoteBuilder({ showToast }: Props) {
                 </tr>
                 <tr style={{ background: 'rgba(96,165,250,0.06)', borderTop: '1px solid rgba(96,165,250,0.2)' }}>
                   <td colSpan={5} style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, fontSize: 12, color: '#60A5FA', letterSpacing: '0.3px' }}>
-                    MATERIAL SUBTOTAL:
+                    MATERIAL SUBTOTAL:{!printMaterial && <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>(not in total)</span>}
                   </td>
                   <td style={{ color: '#60A5FA', textAlign: 'center', padding: '8px 3px', opacity: 0.7 }}>$</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, fontSize: 16, color: '#60A5FA', fontFamily: 'monospace' }}>
@@ -1045,7 +1122,7 @@ export default function QuoteBuilder({ showToast }: Props) {
 
                 <tr><td colSpan={8} style={{ height: 10 }} /></tr>
 
-                {sectionHeader('Labour', '#A78BFA')}
+                {sectionHeader('Labour', '#A78BFA', printLabour, () => setPrintLabour(v => !v))}
                 {labItems.map(item => renderRow(item, 'Labour'))}
                 <tr>
                   <td colSpan={8} style={{ padding: '4px 8px' }}>
@@ -1055,7 +1132,7 @@ export default function QuoteBuilder({ showToast }: Props) {
                 </tr>
                 <tr style={{ background: 'rgba(167,139,250,0.06)', borderTop: '1px solid rgba(167,139,250,0.2)' }}>
                   <td colSpan={5} style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, fontSize: 12, color: '#A78BFA', letterSpacing: '0.3px' }}>
-                    LABOUR SUBTOTAL:{totalHours > 0 && <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>({totalHours} Hrs)</span>}
+                    LABOUR SUBTOTAL:{totalHours > 0 && <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>({totalHours} Hrs)</span>}{!printLabour && <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>(not in total)</span>}
                   </td>
                   <td style={{ color: '#A78BFA', textAlign: 'center', padding: '8px 3px', opacity: 0.7 }}>$</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, fontSize: 16, color: '#A78BFA', fontFamily: 'monospace' }}>
